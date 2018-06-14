@@ -1,0 +1,14 @@
+file_roots:
+  base:
+    - /srv/salt/states
+
+pillar_roots:
+  base:
+    - /srv/salt/pillar
+
+reactor:
+  - 'salt/auth':
+    - '/srv/salt/reactor/auto_accept_key.sls'
+
+#log_level: debug
+
