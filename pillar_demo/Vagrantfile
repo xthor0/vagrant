@@ -41,7 +41,7 @@ Vagrant.configure("2") do |config|
         yum clean expire-cache
 
         # Install Salt
-        yum install -y salt salt-0:2016.11.9-2.el7.noarch salt-cloud-0:2016.11.9-2.el7.noarch salt-master-0:2016.11.9-2.el7.noarch
+        yum install -y salt salt-0:2016.11.9-2.el7.noarch salt-cloud-0:2016.11.9-2.el7.noarch salt-master-0:2016.11.9-2.el7.noarch pyOpenSSL salt-api
 
         # install salt config files for master
         cat /vagrant/etc/master > /etc/salt/master
@@ -49,7 +49,24 @@ Vagrant.configure("2") do |config|
         # Set local hostname
         hostnamectl set-hostname master.localdev
 
-        # Set Salt Minion to start at reboot
+        # configure minion
+        cat /vagrant/etc/minion > /etc/salt/minion
+
+        # start minion
+        systemctl enable salt-minion
+        systemctl start salt-minion
+
+        # generate SSL cert for API
+        salt-call --local tls.create_self_signed_cert
+
+        # set the vagrant user's password
+        echo r0ck0n | passwd --stdin vagrant
+
+        # start salt-api
+        systemctl enable salt-api
+        systemctl start salt-api
+
+        # Set Salt Master to start at reboot
         systemctl enable salt-master.service
 
         # Start Salt Minion service
