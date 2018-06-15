@@ -1,0 +1,17 @@
+[Unit]
+Description=Simple Node.JS Web Server
+Wants=network.target
+After=network.target
+
+[Service]
+ExecStart={{ salt['pillar.get']('nodejs:bin') }} {{ salt['pillar.get']('nodejs:docroot') }}/simpleweb.js
+WorkingDirectory={{ salt['pillar.get']('nodejs:docroot') }}
+Restart=always
+# Restart service after 10 seconds if node service crashes
+RestartSec=10
+# Output to syslog
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier={{ salt['pillar.get']('nginx:http_servername')}}
+User=root
+Environment=NODE_ENV={{ salt['grains.get']('env') }} PORT={{ salt['pillar.get']('nodejs:port') }}
