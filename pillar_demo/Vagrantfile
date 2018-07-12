@@ -29,8 +29,14 @@ Vagrant.configure("2") do |config|
         # Disable IPv6
         echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
         /sbin/sysctl -p
+
+        # install new hosts file so all minions are pingable
+        cat /vagrant/etc/hosts > /etc/hosts
         
-        sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/fastestmirror.conf
+        # I'm not sure why Patrick disables fastestmirror?
+        #sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/fastestmirror.conf
+
+        # install epel and then some programs I like to have
         yum -y install epel-release
         yum -y install wget screen rsync vim-enhanced bind-utils net-tools bash-completion bash-completion-extras
 
@@ -41,7 +47,7 @@ Vagrant.configure("2") do |config|
         yum clean expire-cache
 
         # Install Salt
-        yum install -y salt salt-0:2016.11.9-2.el7.noarch salt-cloud-0:2016.11.9-2.el7.noarch salt-master-0:2016.11.9-2.el7.noarch pyOpenSSL salt-api
+        yum install -y salt salt-0:2016.11.9-2.el7.noarch salt-cloud-0:2016.11.9-2.el7.noarch salt-master-0:2016.11.9-2.el7.noarch salt-minion-0:2016.11.9-2.el7.noarch pyOpenSSL salt-api
 
         # install salt config files for master
         cat /vagrant/etc/master > /etc/salt/master
@@ -93,8 +99,13 @@ Vagrant.configure("2") do |config|
       # Disable IPv6
       echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
       /sbin/sysctl -p
+
+      # install hosts file so that everything is pingable
+      cat /vagrant/etc/hosts > /etc/hosts
       
-      sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/fastestmirror.conf
+      #sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/fastestmirror.conf
+      
+      # install epel and some packages I like
       yum -y install epel-release
       yum -y install wget screen rsync vim-enhanced bind-utils net-tools bash-completion bash-completion-extras
 
