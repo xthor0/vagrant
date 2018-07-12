@@ -1,0 +1,57 @@
+Vagrant.configure("2") do |config|
+
+  ## I may forget - the intent of this Vagrantfile is to set up a Salt master
+	# responding to minions on the supplied IP address
+	# I need to figure out how to make the minions check in to the master and get the master to save
+	# the keys. or, make the master auto-accept all keys :)	
+  ## Choose your base box
+  config.vm.box = "geerlingguy/centos7"
+
+(1..3).each do |i|
+  config.vm.define "docker-swarm#{i}" do |node|
+    node.vm.network "private_network", ip: "192.168.221.10#{i}"
+    node.vm.provision "shell", inline: <<-EOF
+      # some prep work
+      # Disable IPv6
+      echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
+      /sbin/sysctl -p
+      
+      sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/fastestmirror.conf
+      yum -y install epel-release
+      yum -y install wget screen rsync vim-enhanced bind-utils net-tools bash-completion bash-completion-extras yum-utils device-mapper-persistent-data lvm2
+
+      # Install docker repo
+      yum-config-manager -y --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+      # set the hostname
+      hostnamectl set-hostname docker-swarm#{i}
+
+      # install docker ce
+      yum -y install docker-ce
+
+      # start docker
+      systemctl start docker && systemctl enable docker
+
+      # docker swarm init
+      # docker swarm init --advertise-addr 192.168.221.10#{i}
+
+      # install docker-compose - maybe we don't need this?
+      curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+
+      # bash completion for docker
+      curl https://raw.githubusercontent.com/docker/docker-ce/master/components/cli/contrib/completion/bash/docker -o /etc/bash_completion.d/docker.sh
+
+      # if we need bash completion for docker-compose, here it is
+      # curl -L https://raw.githubusercontent.com/docker/compose/1.21.2/contrib/completion/bash/docker-compose -o /etc/bash_completion.d/docker-compose
+
+
+    EOF
+
+    # 512MB RAM just ain't enough...
+    node.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", "1024", "--cpus", "1"]
+    end
+  end
+end
+  
+end
