@@ -1,0 +1,13 @@
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+# hosts entries for all the master - so that it's easier to ping/curl/whatever!
+192.168.221.101		docker-swarm1	docker-swarm1.localdev
+192.168.221.102		docker-swarm2	docker-swarm2.localdev
+192.168.221.103		docker-swarm3	docker-swarm3.localdev
+192.168.221.104		docker-swarm4	docker-swarm4.localdev
+192.168.221.105		docker-swarm5	docker-swarm5.localdev
+192.168.221.106		docker-swarm6	docker-swarm6.localdev
+192.168.221.107		docker-swarm7	docker-swarm7.localdev
+192.168.221.108		docker-swarm8	docker-swarm8.localdev
+192.168.221.109		docker-swarm9	docker-swarm9.localdev

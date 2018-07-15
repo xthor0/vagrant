@@ -7,7 +7,92 @@ Vagrant.configure("2") do |config|
   ## Choose your base box
   config.vm.box = "geerlingguy/centos7"
 
-(1..3).each do |i|
+  config.vm.define "master" do |master|
+    ## Connect to host's network
+    master.vm.network "private_network", ip: "192.168.221.10"
+
+    ## Present guest network ports to host's network
+    #master.vm.network "forwarded_port", guest: 4505, host: 4505, protocol: "tcp"
+    #master.vm.network "forwarded_port", guest: 4506, host: 4506, protocol: "tcp"
+
+    ## Mount Salt file root
+    master.vm.synced_folder "salt/states/", "/srv/salt/states/"
+    master.vm.synced_folder "salt/pillar/", "/srv/salt/pillar/"
+    master.vm.synced_folder "salt/reactor/", "/srv/salt/reactor/"
+    #master.vm.synced_folder "~/Documents/git/chg/salt/states/", "/srv/salt/states/"
+    #master.vm.synced_folder "~/Documents/git/chg/salt/pillars/", "/srv/salt/pillars/"
+    #master.vm.synced_folder "formulae/", "/srv/salt/formulae/"
+    #master.vm.synced_folder "configs/", "/srv/salt/configs/"
+
+    ## If connected to public_network, uncomment this block to automatically install Salt
+    master.vm.provision "shell", inline: <<-EOF
+        # Disable IPv6
+        echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
+        /sbin/sysctl -p
+
+        # install new hosts file so all minions are pingable
+        cat /vagrant/salt/etc/hosts > /etc/hosts
+
+        # I'm not sure why Patrick disables fastestmirror?
+        #sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/fastestmirror.conf
+
+        # install epel and then some programs I like to have
+        yum -y install epel-release
+        yum -y install wget screen rsync vim-enhanced bind-utils net-tools bash-completion bash-completion-extras
+
+        # Install Salt repo
+        yum install -y https://repo.saltstack.com/yum/redhat/salt-repo-2016.11-2.el7.noarch.rpm
+
+        # Expire YUM cache
+        yum clean expire-cache
+
+        # Install Salt
+        yum install -y salt salt-0:2016.11.9-2.el7.noarch salt-cloud-0:2016.11.9-2.el7.noarch salt-master-0:2016.11.9-2.el7.noarch salt-minion-0:2016.11.9-2.el7.noarch pyOpenSSL salt-api
+
+        # install salt config files for master
+        cat /vagrant/salt/etc/master > /etc/salt/master
+
+        # Set local hostname
+        hostnamectl set-hostname master.localdev
+
+        # configure minion
+        cat /vagrant/salt/etc/minion > /etc/salt/minion
+
+        # start minion
+        systemctl enable salt-minion
+        systemctl start salt-minion
+
+        # generate SSL cert for API
+        salt-call --local tls.create_self_signed_cert
+
+        # set the vagrant user's password - only needed if we enable the Salt API
+        echo r0ck0n | passwd --stdin vagrant
+
+        # start salt-api
+        systemctl enable salt-api
+        systemctl start salt-api
+
+        # Set Salt Master to start at reboot
+        systemctl enable salt-master.service
+
+        # Start Salt Minion service
+        systemctl start salt-master.service
+
+        # Set some local Salt grains
+        #salt-call grains.set env dev
+        #salt-call grains.append roles localdev
+
+      EOF
+
+    # The master MAY need more CPU or memory if you can provide it - leaving this here for reference.
+    master.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", "2048", "--cpus", "1"]
+    end
+
+  end
+
+
+(1..5).each do |i|
   config.vm.define "docker-swarm#{i}" do |node|
     node.vm.network "private_network", ip: "192.168.221.10#{i}"
     node.vm.provision "shell", inline: <<-EOF
@@ -15,31 +100,48 @@ Vagrant.configure("2") do |config|
       # Disable IPv6
       echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
       /sbin/sysctl -p
-      
-      sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/fastestmirror.conf
-      yum -y install epel-release
-      yum -y install wget screen rsync vim-enhanced bind-utils net-tools bash-completion bash-completion-extras yum-utils device-mapper-persistent-data lvm2
-
-      # Install docker repo
-      yum-config-manager -y --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 
       # set the hostname
       hostnamectl set-hostname docker-swarm#{i}
+      
+      sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/fastestmirror.conf
+      yum -y install epel-release
+
+      # Install Salt repo
+      yum install -y https://repo.saltstack.com/yum/redhat/salt-repo-2016.11-2.el7.noarch.rpm
+
+      # Expire YUM cache
+      yum clean expire-cache
+
+      # Install Salt
+      yum install -y salt salt-minion-0:2016.11.9-2.el7.noarch
+
+      # install salt config files for master
+      cat /vagrant/salt/etc/minion > /etc/salt/minion
+
+      # Set Salt Minion to start at reboot and start the service now
+      systemctl enable salt-minion.service && systemctl start salt-minion.service
+
+      # ALL docker installation and configuration will be perfomed by Salt
+      # yum -y install wget screen rsync vim-enhanced bind-utils net-tools bash-completion bash-completion-extras yum-utils device-mapper-persistent-data lvm2
+
+      # Install docker repo
+      # yum-config-manager -y --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 
       # install docker ce
-      yum -y install docker-ce
+      # yum -y install docker-ce
 
       # start docker
-      systemctl start docker && systemctl enable docker
+      # systemctl start docker && systemctl enable docker
 
       # docker swarm init
       # docker swarm init --advertise-addr 192.168.221.10#{i}
 
       # install docker-compose - maybe we don't need this?
-      curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+      # curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
 
       # bash completion for docker
-      curl https://raw.githubusercontent.com/docker/docker-ce/master/components/cli/contrib/completion/bash/docker -o /etc/bash_completion.d/docker.sh
+      # curl https://raw.githubusercontent.com/docker/docker-ce/master/components/cli/contrib/completion/bash/docker -o /etc/bash_completion.d/docker.sh
 
       # if we need bash completion for docker-compose, here it is
       # curl -L https://raw.githubusercontent.com/docker/compose/1.21.2/contrib/completion/bash/docker-compose -o /etc/bash_completion.d/docker-compose

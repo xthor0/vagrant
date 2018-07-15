@@ -1,0 +1,24 @@
+file_roots:
+  base:
+    - /srv/salt/states
+
+pillar_roots:
+  base:
+    - /srv/salt/pillar
+
+reactor:
+  - 'salt/auth':
+    - '/srv/salt/reactor/auto_accept_key.sls'
+
+rest_cherrypy:
+  port: 8000
+  ssl_crt: /etc/pki/tls/certs/localhost.crt
+  ssl_key: /etc/pki/tls/certs/localhost.key
+
+external_auth:
+  pam:
+    vagrant:
+      - .*
+
+#log_level: debug
+
