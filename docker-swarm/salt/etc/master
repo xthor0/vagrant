@@ -1,6 +1,7 @@
 file_roots:
   base:
     - /srv/salt/states
+    - /srv/salt/formulae
 
 pillar_roots:
   base:

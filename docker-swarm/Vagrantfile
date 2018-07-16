@@ -19,9 +19,7 @@ Vagrant.configure("2") do |config|
     master.vm.synced_folder "salt/states/", "/srv/salt/states/"
     master.vm.synced_folder "salt/pillar/", "/srv/salt/pillar/"
     master.vm.synced_folder "salt/reactor/", "/srv/salt/reactor/"
-    #master.vm.synced_folder "~/Documents/git/chg/salt/states/", "/srv/salt/states/"
-    #master.vm.synced_folder "~/Documents/git/chg/salt/pillars/", "/srv/salt/pillars/"
-    #master.vm.synced_folder "formulae/", "/srv/salt/formulae/"
+    master.vm.synced_folder "~/git/salt-formulae/", "/srv/salt/formulae/"
     #master.vm.synced_folder "configs/", "/srv/salt/configs/"
 
     ## If connected to public_network, uncomment this block to automatically install Salt

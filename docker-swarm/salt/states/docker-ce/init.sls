@@ -29,4 +29,28 @@ install-bash-completion-docker:
         - owner: root
         - group: root
 
+# apparently /etc/docker isn't created till the service runs once, so let's make it now
+/etc/docker:
+    file.directory:
+        - mode: 755
+        - owner: root
+
+# the default network (172.17.0.0/16) conflicts with some of CHG's networks - so we change it
+/etc/docker/daemon.json:
+    file.managed:
+        - source: salt://docker-ce/files/daemon.json
+        - owner: root
+        - mode: 644
+
+run-docker-services:
+    service.running:
+        - name: docker
+        - enable: True
+        - watch:
+            - file: /etc/docker/daemon.json
+    require:
+        - pkgrepo: docker-ce-repo
+        - pkg: install-docker-ce-packages
+        - file: /etc/docker/daemon.json
+
 {% endif %}
