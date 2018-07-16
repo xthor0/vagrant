@@ -26,20 +26,20 @@ install-bash-completion-docker:
         - source_hash: 1815000058cb44c4f87373a72d5abef328c95e1729a3f0be178371467fab110b
         - name: /etc/bash_completion.d/docker.sh
         - mode: 644
-        - owner: root
+        - user: root
         - group: root
 
 # apparently /etc/docker isn't created till the service runs once, so let's make it now
 /etc/docker:
     file.directory:
         - mode: 755
-        - owner: root
+        - user: root
 
 # the default network (172.17.0.0/16) conflicts with some of CHG's networks - so we change it
 /etc/docker/daemon.json:
     file.managed:
         - source: salt://docker-ce/files/daemon.json
-        - owner: root
+        - user: root
         - mode: 644
 
 run-docker-services:
