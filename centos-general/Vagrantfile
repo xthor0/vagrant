@@ -1,0 +1,58 @@
+Vagrant.configure("2") do |config|
+  
+  ## Choose your base box
+  config.vm.box = "geerlingguy/centos7"
+
+  # This is Ben trying to figure out Vagrant, and modify what Patrick has already done...
+  config.vm.define "cent7gen" do |cent7gen|
+    #cent7gen.vm.network "public_network"
+    # use the below config if you don't want to forward ports
+    config.vm.network "private_network", :type => 'dhcp', :name => 'vboxnet0'
+    # instead I will just forward 80 via 8080
+    # config.vm.network "forwarded_port", guest: 8080, host: 8080
+
+    ### Mount Salt file root
+    cent7gen.vm.synced_folder "~/git/", "/srv/git"
+    
+    cent7gen.vm.provision "shell", inline: <<-EOF
+      # Disable IPv6
+      echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
+      /sbin/sysctl -p
+
+      # Disable Fastest Mirror YUM plugin
+      sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/fastestmirror.conf
+      
+      # Install EPEL repo
+      #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+      # centos has this already in their repo, so...
+      yum -y install epel-release yum-utils
+
+      # install salt repo
+
+      # Install docker repo
+      yum-config-manager -y --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+      
+      # install salt repo
+      yum install -y https://repo.saltstack.com/yum/redhat/salt-repo-latest-2.el7.noarch.rpm
+
+      # Install packages
+      yum install -y python-pygit2 libgit2 git man-pages nano telnet bind-utils screen lsof vim-enhanced wget bash-completion bash-completion-extras docker-ce salt salt-master salt-cloud
+
+      # bash completion for docker
+      curl https://raw.githubusercontent.com/docker/docker-ce/master/components/cli/contrib/completion/bash/docker -o /etc/bash_completion.d/docker.sh
+
+      # Set local hostname
+      hostnamectl set-hostname cent7gen.localdev
+      
+      # start & enable docker
+      systemctl start docker && systemctl enable docker
+      
+    EOF
+      
+    # Some states needs more memory or CPU to run the apps. Uncomment below if needed.
+    cent7gen.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", "2048", "--cpus", "1"]
+    end
+  end
+
+end
