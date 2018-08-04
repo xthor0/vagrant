@@ -1,0 +1,13 @@
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+# hosts entries for all the minions - so that it's easier to ping/curl/whatever!
+192.168.221.101		minion1	minion1.localdev
+192.168.221.102		minion2	minion2.localdev
+192.168.221.103		minion3	minion3.localdev
+192.168.221.104		minion4	minion4.localdev
+192.168.221.105		minion5	minion5.localdev
+192.168.221.106		minion6	minion6.localdev
+192.168.221.107		minion7	minion7.localdev
+192.168.221.108		minion8	minion8.localdev
+192.168.221.109		minion9	minion9.localdev

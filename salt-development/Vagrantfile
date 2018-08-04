@@ -1,0 +1,112 @@
+Vagrant.configure("2") do |config|
+
+  ## I may forget - the intent of this Vagrantfile is to set up a Salt master
+	# responding to minions on the supplied IP address
+	# I need to figure out how to make the minions check in to the master and get the master to save
+	# the keys. or, make the master auto-accept all keys :)
+  ## Choose your base box
+  config.vm.box = "geerlingguy/centos7"
+
+  config.vm.define "master" do |master|
+    ## Connect to host's network
+    master.vm.network "private_network", ip: "192.168.221.10"
+
+    ## Present guest network ports to host's network
+    #master.vm.network "forwarded_port", guest: 4505, host: 4505, protocol: "tcp"
+    #master.vm.network "forwarded_port", guest: 4506, host: 4506, protocol: "tcp"
+
+    ## Mount Salt file root
+    master.vm.synced_folder "salt-root/", "/srv/salt/"
+    master.vm.synced_folder "~/git/salt/salt-top/", "/srv/salt/states/"
+    #master.vm.synced_folder "formulae/", "/srv/salt/formulae/"
+    #master.vm.synced_folder "configs/", "/srv/salt/configs/"
+
+    ## If connected to public_network, uncomment this block to automatically install Salt
+    master.vm.provision "shell", inline: <<-EOF
+        # Disable IPv6
+        echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
+        /sbin/sysctl -p
+
+        # Set local hostname
+        hostnamectl set-hostname master.localdev
+        
+        # bootstrap with the Salt scripts
+        curl -L https://bootstrap.saltstack.com -o /tmp/install_salt.sh && sh /tmp/install_salt.sh -P -M -L -X && rm -f /tmp/install_salt.sh
+
+        # the bootstrap doesn't install EVERYTHING... also, there are some additional packages that make life easier
+        yum -y install pyOpenSSL salt-api wget screen rsync vim-enhanced bind-utils net-tools bash-completion bash-completion-extras
+        
+        # install salt config files for master
+        # symlinking means that if you edit the file in the Vagramt VM, changes will be kept...
+        mv /etc/salt/master /etc/salt/master.original && ln -s /vagrant/etc/master /etc/salt/master
+
+        # configure minion
+        #cat /vagrant/etc/minion > /etc/salt/minion
+        mv /etc/salt/minion /etc/salt/minion.original && ln -s /vagrant/etc/minion /etc/salt/minion
+
+        # start minion
+        systemctl enable salt-minion
+        systemctl start salt-minion
+
+        # generate SSL cert for API
+        salt-call --local tls.create_self_signed_cert
+
+        # set the vagrant user's password
+        echo r0ck0n | passwd --stdin vagrant
+
+        # start salt-api
+        systemctl enable salt-api
+        systemctl start salt-api
+
+        # Set Salt Master to start at reboot
+        systemctl enable salt-master.service
+
+        # Start Salt Minion service
+        systemctl start salt-master.service
+
+        # Set some local Salt grains
+        #salt-call grains.set env dev
+        #salt-call grains.append roles localdev
+
+      EOF
+
+    # The master MAY need more CPU or memory if you can provide it - leaving this here for reference.
+    master.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", "1024", "--cpus", "1"]
+    end
+
+  end
+
+(1..5).each do |i|
+  config.vm.define "minion#{i}" do |node|
+    node.vm.network "private_network", ip: "192.168.221.10#{i}"
+    node.vm.provision "shell", inline: <<-EOF
+      # some prep work
+      # Disable IPv6
+      echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
+      /sbin/sysctl -p
+
+      # Set local hostname
+      hostnamectl set-hostname minion#{i}.localdev
+      
+      # Install Salt minion from bootstrap script
+      # you CAN install a specific version if you need it...
+      # bootstrap-salt.sh stable 2016.11
+      curl -L https://bootstrap.saltstack.com -o /tmp/install_salt.sh && sh /tmp/install_salt.sh -P -X && rm -f /tmp/install_salt.sh
+
+      # install salt config files for master
+      cat /vagrant/etc/minion > /etc/salt/minion
+
+      # Set Salt Minion to start at reboot
+      systemctl enable salt-minion.service
+
+      # Start Salt Minion service
+      systemctl start salt-minion.service
+
+      # key should be auto-accepted on master at this point!
+
+    EOF
+  end
+end
+
+end
