@@ -1,5 +1,4 @@
 # Salt Development using Vagrant and Virtualbox
-==================
 I've probably overdone this. I have a habit of doing that, thinking that I need to refine a demo to the point of perfection. Oh well, maybe this'll be useful to someone. :)
 
 ## Requirements
