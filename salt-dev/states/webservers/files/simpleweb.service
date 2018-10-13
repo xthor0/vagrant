@@ -1,0 +1,17 @@
+[Unit]
+Description=Simple Node.JS Web Server
+Wants=network.target
+After=network.target
+
+[Service]
+ExecStart={{ nodejs_bin }} {{ script }}
+WorkingDirectory={{ docroot }}
+Restart=always
+# Restart service after 10 seconds if node service crashes
+RestartSec=10
+# Output to syslog
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier={{ appname }}
+User=root
+Environment=NODE_ENV={{ salt['grains.get']('env') }} PORT={{ nodejs_port }}

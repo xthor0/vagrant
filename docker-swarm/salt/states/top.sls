@@ -1,3 +1,3 @@
 base:
     'docker-swarm*':
-        - docker-swarm
+        - docker-ce-swarm
