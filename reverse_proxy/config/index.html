@@ -85,9 +85,17 @@
             <div class="alert">
                 <h2>Links</h2>
                 <div class="content">
-                        <a href="http://192.168.221.10/webapp1/">webapp1</a><br>
-                        <a href="http://192.168.221.10/webapp2/">webapp2</a><br>
-                        <a href="http://192.168.221.10/webapp3/">webapp3</a><br>
+                    <a href="http://192.168.221.10/webapp1/">webapp1</a><br>
+                    <a href="http://192.168.221.10/webapp2/">webapp2</a><br>
+                    <a href="http://192.168.221.10/webapp3/">webapp3</a><br>
+                </div>
+                <h2>To do:</h2>
+                <div class="content">
+                    <ul>
+                        <li>Figure out how to load the back-end HTTP server independently from the reverse proxy</li>
+                        <li>Determine which port nginx is sending traffic to on the back-end server</li>
+                        <li>Fix the broken link!</li>
+                    </ul>
                 </div>
             </div>
             <div class="alert">
@@ -96,9 +104,11 @@
                     <p>nginx config file: <tt>/etc/nginx/nginx.conf</tt> located on <tt>192.168.221.10</tt> (proxy)</p>
 
                     <p>Back-end servers:
+                        <p>
                         <tt>192.168.221.101</tt> (webapp1)<br>
                         <tt>192.168.221.102</tt> (webapp2)<br>
                         <tt>192.168.221.103</tt> (webapp3)<br>
+                        </p>
                     </p>
 
                     <p>Back-end servers are running a nodejs process (hint: <strong>netstat -antp</strong>)</p>

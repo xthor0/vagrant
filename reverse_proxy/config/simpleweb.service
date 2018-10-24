@@ -4,8 +4,8 @@ Wants=network.target
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/node /srv/www/simpleweb.js
-WorkingDirectory=/srv/www
+ExecStart=/usr/bin/node /srv/scripts/simpleweb.js
+WorkingDirectory=/srv/scripts
 Restart=always
 # Restart service after 10 seconds if node service crashes
 RestartSec=10
