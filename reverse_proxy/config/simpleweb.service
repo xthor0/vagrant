@@ -1,0 +1,17 @@
+[Unit]
+Description=Simple Node.JS Web Server
+Wants=network.target
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/node /srv/www/simpleweb.js
+WorkingDirectory=/srv/www
+Restart=always
+# Restart service after 10 seconds if node service crashes
+RestartSec=10
+# Output to syslog
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=simpleweb
+User=root
+Environment=PORT=%%port%% HOSTNAME=%%hostname%%

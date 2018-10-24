@@ -1,0 +1,33 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = "2"
+
+# build one server to act as proxy, and 2 application servers
+cluster = {
+  "proxy" => { :ip => "192.168.221.10", :cpus => 1, :mem => 1024 },
+  "webapp1" => { :ip => "192.168.221.101", :cpus => 1, :mem => 512 },
+  "webapp2" => { :ip => "192.168.221.102", :cpus => 1, :mem => 512 },
+  "webapp3" => { :ip => "192.168.221.104", :cpus => 1, :mem => 512 }
+}
+ 
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  cluster.each_with_index do |(hostname, info), index|
+
+    config.vm.define hostname do |cfg|
+      cfg.vm.provider :virtualbox do |vb, override|
+        config.vm.box = "geerlingguy/centos7"
+        override.vm.network :private_network, ip: "#{info[:ip]}"
+        override.vm.hostname = hostname
+        vb.name = hostname
+        vb.customize ["modifyvm", :id, "--memory", info[:mem], "--cpus", info[:cpus], "--hwvirtex", "on"]
+        override.vm.synced_folder "scripts/", "/srv/scripts/"
+        override.vm.synced_folder "config/", "/srv/config/"
+        override.vm.provision "shell", inline: "bash /srv/scripts/setup_server.sh #{hostname}"
+      end # end provider
+    end # end config
+
+  end # end cluster
+end
+
