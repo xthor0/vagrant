@@ -3,36 +3,66 @@
 
 VAGRANTFILE_API_VERSION = "2"
 
-# the hosts file is set up for 9 minions. Overkill, really.
+# define a minion for each OS type
+# don't use DHCP. I tried. It apparently doesn't work with VirtualBox. Stick with static IPs, as annoying as it is.
 cluster = {
-  "master" => { :ip => "192.168.221.10", :cpus => 1, :mem => 2048 },
-  "minion1" => { :ip => "192.168.221.101", :cpus => 1, :mem => 1024 },
-  "minion2" => { :ip => "192.168.221.102", :cpus => 1, :mem => 1024 },
-  "minion3" => { :ip => "192.168.221.103", :cpus => 1, :mem => 1024 }
+  "salt-master" => { :cpus => 1, :mem => 2048, :box => "geerlingguy/centos7" },
+  "bionic" => { :cpus => 1, :mem => 1024, :box => "ubuntu/bionic64" },
+  "stretch" => { :cpus => 1, :mem => 1024, :box => "debian/stretch64" },
+  "buster" => { :cpus => 1, :mem => 1024, :box => "debian/buster64" },
+  "centos7" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/centos7" },
+  "centos8" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/centos8" }
 }
- 
+
+box = {
+  "bionic" => "ubuntu/bionic64",
+  "stretch" => "debian/stretch64",
+  "buster" => "debian/buster64",
+  "centos7" => "geerlingguy/centos7",
+  "centos8" => "geerlingguy/centos8"
+}
+
+subnet = "192.168.56"
+minion_count = ENV['minions'] || 1
+ostype = ENV['ostype'] || "centos7"
+
+# generate random IP address end octet
+r = Random.new
+
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.hostmanager.enabled = true
+  config.hostmanager.manage_host = true
+  config.hostmanager.manage_guest = true
+  config.hostmanager.ignore_private_ip = false
+  config.hostmanager.include_offline = true
 
-  cluster.each_with_index do |(hostname, info), index|
-
-    config.vm.define hostname do |cfg|
-      cfg.vm.provider :virtualbox do |vb, override|
-        config.vm.box = "geerlingguy/centos7"
-        override.vm.network :private_network, ip: "#{info[:ip]}"
-        override.vm.hostname = hostname
-        vb.name = hostname
-        vb.customize ["modifyvm", :id, "--memory", info[:mem], "--cpus", info[:cpus], "--hwvirtex", "on"]
-        if hostname == "master"
-          override.vm.synced_folder "states/", "/srv/salt/states/"
-          override.vm.synced_folder "pillar/", "/srv/salt/pillar/"
-          override.vm.synced_folder "reactor/", "/srv/salt/reactor/"      
-          override.vm.provision "shell", inline: "bash /vagrant/etc/setup_master.sh"
-        else
-          override.vm.provision "shell", inline: "bash /vagrant/etc/setup_minion.sh #{hostname}"
-        end
+  # salt-master is primary. gets built no matter what.
+  config.vm.define "salt-master", primary: true do |master|
+    master.vm.box = "#{box["centos7"]}"
+    master.vm.hostname = "salt-master"
+    master.hostmanager.aliases = %w(salt)
+    master.vm.network :private_network, ip: subnet + ".10"
+    master.vm.synced_folder "salt_root/", "/srv/salt/"
+    master.vm.synced_folder "~/git/salt-top", "/srv/salt/states/"
+    master.vm.provision "shell", inline: "bash /vagrant/provision/setup_master.sh"
+    master.vm.provider :virtualbox do |vb, override|
+      vb.customize ["modifyvm", :id, "--memory", "2048", "--cpus", "2", "--hwvirtex", "on"]
+    end # end provider
+  end # end salt-master
+  
+  # minions depend on OS environment variables, but have defaults pre-set
+  (1..minion_count.to_i).each do |i|
+    vmname = "#{ostype}" + "-n" + "#{i}"
+    end_ip = r.rand(15..254)
+    config.vm.define vmname do |node|
+      node.vm.box = "#{box[ostype]}"
+      node.vm.network :private_network, :ip => "#{subnet}" + "." + "#{end_ip}"
+      node.vm.hostname = "#{vmname}"
+      node.vm.provision "shell", inline: "bash /vagrant/provision/setup_minion.sh"
+      node.vm.provider :virtualbox do |vb, override|
+        vb.customize ["modifyvm", :id, "--memory", "1024", "--cpus", "1", "--hwvirtex", "on"]
       end # end provider
-    end # end config
-
-  end # end cluster
-end
+    end # end vm definition
+  end # end minion_count loop
+end # end overall config
 
