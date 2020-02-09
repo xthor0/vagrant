@@ -6,42 +6,33 @@ VAGRANTFILE_API_VERSION = "2"
 # define a minion for each OS type
 # don't use DHCP. I tried. It apparently doesn't work with VirtualBox. Stick with static IPs, as annoying as it is.
 cluster = {
-  "salt-master" => { :cpus => 1, :mem => 2048, :box => "geerlingguy/centos7" },
-  "bionic" => { :cpus => 1, :mem => 1024, :box => "ubuntu/bionic64" },
-  "stretch" => { :cpus => 1, :mem => 1024, :box => "debian/stretch64" },
-  "buster" => { :cpus => 1, :mem => 1024, :box => "debian/buster64" },
-  "centos7" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/centos7" },
-  "centos8" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/centos8" }
-}
-
-box = {
-  "bionic" => "ubuntu/bionic64",
-  "stretch" => "debian/stretch64",
-  "buster" => "debian/buster64",
-  "centos7" => "geerlingguy/centos7",
-  "centos8" => "geerlingguy/centos8"
+  "bionic" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/ubuntu1804", :count => 0 },
+  "stretch" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/debian9", :count => 0 },
+  "buster" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/debian10", :count => 0 },
+  "centos7" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/centos7", :count => 1 },
+  "centos8" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/centos8", :count => 0 }
 }
 
 subnet = "192.168.56"
-minion_count = ENV['minions'] || 1
-ostype = ENV['ostype'] || "centos7"
 
 # generate random IP address end octet
 r = Random.new
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  # config options for hostmanager
   config.hostmanager.enabled = true
-  config.hostmanager.manage_host = true
+  config.hostmanager.manage_host = false # this is done with vagrant-hostsupdater
   config.hostmanager.manage_guest = true
   config.hostmanager.ignore_private_ip = false
   config.hostmanager.include_offline = true
 
   # salt-master is primary. gets built no matter what.
   config.vm.define "salt-master", primary: true do |master|
-    master.vm.box = "#{box["centos7"]}"
+    master.vm.box = "geerlingguy/centos7"
     master.vm.hostname = "salt-master"
-    master.hostmanager.aliases = %w(salt)
     master.vm.network :private_network, ip: subnet + ".10"
+    master.hostsupdater.aliases = ["salt"]
+    master.hostmanager.aliases = ["salt"]
     master.vm.synced_folder "salt_root/", "/srv/salt/"
     master.vm.synced_folder "~/git/salt-top", "/srv/salt/states/"
     master.vm.provision "shell", inline: "bash /vagrant/provision/setup_master.sh"
@@ -49,20 +40,22 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       vb.customize ["modifyvm", :id, "--memory", "2048", "--cpus", "2", "--hwvirtex", "on"]
     end # end provider
   end # end salt-master
-  
-  # minions depend on OS environment variables, but have defaults pre-set
-  (1..minion_count.to_i).each do |i|
-    vmname = "#{ostype}" + "-n" + "#{i}"
-    end_ip = r.rand(15..254)
-    config.vm.define vmname do |node|
-      node.vm.box = "#{box[ostype]}"
-      node.vm.network :private_network, :ip => "#{subnet}" + "." + "#{end_ip}"
-      node.vm.hostname = "#{vmname}"
-      node.vm.provision "shell", inline: "bash /vagrant/provision/setup_minion.sh"
-      node.vm.provider :virtualbox do |vb, override|
-        vb.customize ["modifyvm", :id, "--memory", "1024", "--cpus", "1", "--hwvirtex", "on"]
-      end # end provider
-    end # end vm definition
-  end # end minion_count loop
+ 
+  # build minions
+  cluster.each_with_index do |(hostname, info), index|
+    (1..info[:count]).each do |i|
+      vmname = hostname + "-" + "#{i}"
+      end_ip = r.rand(15..254)
+      config.vm.define vmname do |cfg|
+        cfg.vm.provider :virtualbox do |vb, override|
+          config.vm.box = info[:box]
+          override.vm.network :private_network, :ip => "#{subnet}" + "." + "#{end_ip}"
+          override.vm.hostname = vmname
+          vb.customize ["modifyvm", :id, "--memory", info[:mem], "--cpus", info[:cpus], "--hwvirtex", "on"]
+          override.vm.provision "shell", inline: "bash /vagrant/provision/setup_minion.sh"
+        end # end provider
+      end # end config
+    end # end for loop for count
+  end # end cluster
 end # end overall config
 
