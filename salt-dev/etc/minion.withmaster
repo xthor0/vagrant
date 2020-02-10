@@ -1,0 +1,5 @@
+hash_type: sha256
+log_level: info
+# master: 192.168.221.10
+# should default to 'salt' which, if you're using hostsmanager, is in
+# /etc/hosts

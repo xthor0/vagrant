@@ -4,18 +4,19 @@
 VAGRANTFILE_API_VERSION = "2"
 
 # define a minion for each OS type
-# don't use DHCP. I tried. It apparently doesn't work with VirtualBox. Stick with static IPs, as annoying as it is.
 cluster = {
-  "bionic" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/ubuntu1804", :count => 0 },
-  "stretch" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/debian9", :count => 0 },
+  "bionic" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/ubuntu1804", :count => 1 },
+  "stretch" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/debian9", :count => 1 },
   "buster" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/debian10", :count => 0 },
   "centos7" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/centos7", :count => 1 },
   "centos8" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/centos8", :count => 0 }
 }
 
+# pick a subnet that isn't in use on your personal or corporate network.
 subnet = "192.168.56"
 
-# generate random IP address end octet
+# I wanted to use DHCP so I wouldn't have to randomize IP addresses, but...
+# it doesn't work well with VirtualBox. Sad.
 r = Random.new
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
@@ -34,11 +35,18 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     master.hostsupdater.aliases = ["salt"]
     master.hostmanager.aliases = ["salt"]
     master.vm.synced_folder "salt_root/", "/srv/salt/"
-    master.vm.synced_folder "~/git/salt-top", "/srv/salt/states/"
-    master.vm.provision "shell", inline: "bash /vagrant/provision/setup_master.sh"
+    master.vm.synced_folder "~/git/personal/salt-top", "/srv/salt/states/"
+    config.vm.provision :salt do |salt|
+      salt.install_master = true
+      salt.master_config = "etc/master"
+    end
     master.vm.provider :virtualbox do |vb, override|
       vb.customize ["modifyvm", :id, "--memory", "2048", "--cpus", "2", "--hwvirtex", "on"]
     end # end provider
+    # this is stupid, but apparently salt.run_highstate doesn't work on the master
+    master.vm.provision "shell", inline: <<-EOF
+      sleep 20 && salt-call state.highstate
+    EOF
   end # end salt-master
  
   # build minions
@@ -47,12 +55,16 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       vmname = hostname + "-" + "#{i}"
       end_ip = r.rand(15..254)
       config.vm.define vmname do |cfg|
+        cfg.vm.box = info[:box]
+        cfg.vm.network :private_network, :ip => "#{subnet}" + "." + "#{end_ip}"
+        cfg.vm.hostname = vmname
+        cfg.vm.provision :salt do |salt|
+          salt.minion_config = "etc/minion.withmaster"
+          salt.python_version = "3"
+          salt.run_highstate = true
+        end
         cfg.vm.provider :virtualbox do |vb, override|
-          config.vm.box = info[:box]
-          override.vm.network :private_network, :ip => "#{subnet}" + "." + "#{end_ip}"
-          override.vm.hostname = vmname
           vb.customize ["modifyvm", :id, "--memory", info[:mem], "--cpus", info[:cpus], "--hwvirtex", "on"]
-          override.vm.provision "shell", inline: "bash /vagrant/provision/setup_minion.sh"
         end # end provider
       end # end config
     end # end for loop for count
