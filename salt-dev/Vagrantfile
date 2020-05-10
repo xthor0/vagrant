@@ -6,9 +6,9 @@ VAGRANTFILE_API_VERSION = "2"
 # define a minion for each OS type
 cluster = {
   "bionic" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/ubuntu1804", :count => 1 },
-  "stretch" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/debian9", :count => 1 },
+  "stretch" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/debian9", :count => 0 },
   "buster" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/debian10", :count => 0 },
-  "centos7" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/centos7", :count => 1 },
+  "centos7" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/centos7", :count => 0 },
   "centos8" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/centos8", :count => 0 }
 }
 
@@ -59,6 +59,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         cfg.vm.network :private_network, :ip => "#{subnet}" + "." + "#{end_ip}"
         cfg.vm.hostname = vmname
         cfg.vm.provision :salt do |salt|
+          salt.install_master = false
           salt.minion_config = "etc/minion.withmaster"
           salt.python_version = "3"
           salt.run_highstate = true
