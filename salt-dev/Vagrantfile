@@ -5,11 +5,13 @@ VAGRANTFILE_API_VERSION = "2"
 
 # define a minion for each OS type
 cluster = {
-  "bionic" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/ubuntu1804", :count => 1 },
-  "stretch" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/debian9", :count => 0 },
-  "buster" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/debian10", :count => 0 },
-  "centos7" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/centos7", :count => 0 },
-  "centos8" => { :cpus => 1, :mem => 1024, :box => "geerlingguy/centos8", :count => 0 }
+  "bionic" => { :cpus => 1, :mem => 1024, :box => "generic/ubuntu1804", :count => 0 },
+  "focal" => { :cpus => 1, :mem => 1024, :box => "generic/ubuntu2004", :count => 0 },
+  "buster" => { :cpus => 1, :mem => 1024, :box => "generic/debian10", :count => 0 },
+  "bullseye" => { :cpus => 1, :mem => 1024, :box => "generic/debian11", :count => 1 },
+  "centos7" => { :cpus => 1, :mem => 1024, :box => "generic/centos7", :count => 0 },
+  "centos8" => { :cpus => 1, :mem => 1024, :box => "generic/centos8", :count => 0 },
+  "rocky8" => { :cpus => 1, :mem => 1024, :box => "generic/rocky8", :count => 0 }
 }
 
 # pick a subnet that isn't in use on your personal or corporate network.
@@ -21,32 +23,35 @@ r = Random.new
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # config options for hostmanager
-  config.hostmanager.enabled = true
-  config.hostmanager.manage_host = false # this is done with vagrant-hostsupdater
-  config.hostmanager.manage_guest = true
-  config.hostmanager.ignore_private_ip = false
-  config.hostmanager.include_offline = true
+  #config.hostmanager.enabled = true
+  #config.hostmanager.manage_host = false # this is done with vagrant-hostsupdater
+  #config.hostmanager.manage_guest = true
+  #config.hostmanager.ignore_private_ip = false
+  #config.hostmanager.include_offline = true
 
   # salt-master is primary. gets built no matter what.
   config.vm.define "salt-master", primary: true do |master|
-    master.vm.box = "geerlingguy/centos7"
+    master.vm.box = "generic/debian11"
     master.vm.hostname = "salt-master"
     master.vm.network :private_network, ip: subnet + ".10"
-    master.hostsupdater.aliases = ["salt"]
-    master.hostmanager.aliases = ["salt"]
+    #master.hostsupdater.aliases = ["salt"]
+    #master.hostmanager.aliases = ["salt"]
     master.vm.synced_folder "salt_root/", "/srv/salt/"
     master.vm.synced_folder "~/git/personal/salt-top", "/srv/salt/states/"
     config.vm.provision :salt do |salt|
       salt.install_master = true
+      salt.no_minion = true
       salt.master_config = "etc/master"
+      salt.python_version = "3"
+      #salt.run_highstate = true
     end
     master.vm.provider :virtualbox do |vb, override|
       vb.customize ["modifyvm", :id, "--memory", "2048", "--cpus", "2", "--hwvirtex", "on"]
     end # end provider
     # this is stupid, but apparently salt.run_highstate doesn't work on the master
-    master.vm.provision "shell", inline: <<-EOF
-      sleep 20 && salt-call state.highstate
-    EOF
+    #master.vm.provision "shell", inline: <<-EOF
+    #  sleep 20 && salt-call state.highstate
+    #EOF
   end # end salt-master
  
   # build minions
