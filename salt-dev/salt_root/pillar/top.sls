@@ -1,5 +1,5 @@
 base:
   'G@kernel:linux':
-    - users
+    - linux
   'G@roles:icinga2':
-    - db
+    - icinga2

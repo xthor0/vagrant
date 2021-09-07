@@ -1,3 +1,5 @@
 shadow:
   root: $6$5@lt3dh@5h$GhVSh5vqA37tD5dKc6L9Ro.YkN1J6sluNtpNs127P4LDhNeW0/oDhgIsyc9kL.HXZKHeiXVcq5X5IKhIJYTVS0
   xthor: $6$5@lt3dh@5h$Y3NEEarf7wlIQ0wqZHWmWkmRBVeUWqqbKVPYFjx6mT68w2ihNF.4aqXK1lu7zXNGAJqgc2Z.NrxT3mIJRK9M0.
+icinga2:
+  server_ip: 192.168.56.47
