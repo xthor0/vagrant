@@ -5,13 +5,13 @@ VAGRANTFILE_API_VERSION = "2"
 
 # define a minion for each OS type
 cluster = {
-  "bionic" => { :cpus => 1, :mem => 1024, :box => "generic/ubuntu1804", :count => 0 },
-  "focal" => { :cpus => 1, :mem => 1024, :box => "generic/ubuntu2004", :count => 0 },
+  "bionic" => { :cpus => 1, :mem => 1024, :box => "generic/ubuntu1804", :count => 1 },
+  "focal" => { :cpus => 1, :mem => 1024, :box => "generic/ubuntu2004", :count => 1 },
   "buster" => { :cpus => 1, :mem => 1024, :box => "generic/debian10", :count => 0 },
   "bullseye" => { :cpus => 1, :mem => 1024, :box => "generic/debian11", :count => 1 },
-  "centos7" => { :cpus => 1, :mem => 1024, :box => "generic/centos7", :count => 0 },
+  "centos7" => { :cpus => 1, :mem => 1024, :box => "generic/centos7", :count => 1 },
   "centos8" => { :cpus => 1, :mem => 1024, :box => "generic/centos8", :count => 0 },
-  "rocky8" => { :cpus => 1, :mem => 1024, :box => "generic/rocky8", :count => 0 }
+  "almalinux8" => { :cpus => 1, :mem => 1024, :box => "almalinux/8", :count => 1 }
 }
 
 # pick a subnet that isn't in use on your personal or corporate network.
@@ -67,7 +67,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
           salt.install_master = false
           salt.minion_config = "etc/minion.withmaster"
           salt.python_version = "3"
-          salt.run_highstate = true
+          #salt.run_highstate = true
         end
         cfg.vm.provider :virtualbox do |vb, override|
           vb.customize ["modifyvm", :id, "--memory", info[:mem], "--cpus", info[:cpus], "--hwvirtex", "on"]
