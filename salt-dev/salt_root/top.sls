@@ -3,5 +3,6 @@ base:
   'G@kernel:linux':
     - vagrant
     - linuxos
+    - nrpe
   'G@roles:icinga2':
     - icinga2

@@ -1,7 +1,7 @@
 base:
   'G@kernel:linux':
-    - users
+    - linux
   'G@roles:icinga2':
-    - db
+    - icinga2
   'focal-1':
     - special_updates

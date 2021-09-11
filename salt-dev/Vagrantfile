@@ -63,12 +63,15 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         cfg.vm.box = info[:box]
         cfg.vm.network :private_network, :ip => "#{subnet}" + "." + "#{end_ip}"
         cfg.vm.hostname = vmname
-        cfg.vm.provision :salt do |salt|
-          salt.install_master = false
-          salt.minion_config = "etc/minion.withmaster"
-          salt.python_version = "3"
+        cfg.vm.provision :salt do |saltminion|
+          # no matter what I do, the minion still gets a master. Eff. Fix later.
+          saltminion.install_master = false
+          saltminion.minion_config = "etc/minion.withmaster"
+          saltminion.python_version = "3"
           #salt.run_highstate = true
         end
+        # dear Salt provisioner, why do you still install effing salt-master on my minions??!!
+        cfg.vm.provision "shell", inline: "systemctl stop salt-master; test -f \"$(which apt)\" && apt purge salt-master -y; test -f \"$(which yum)\" && yum -y remove salt-master; test -f \"$(which dnf)\" && dnf -y remove salt-master; echo"
         cfg.vm.provider :virtualbox do |vb, override|
           vb.customize ["modifyvm", :id, "--memory", info[:mem], "--cpus", info[:cpus], "--hwvirtex", "on"]
         end # end provider
